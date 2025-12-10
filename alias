@@ -155,3 +155,67 @@ function gpr() {
     
     # The --open flag will open the PR in your browser.
 }
+# FUNCTION: gclr (Git Clear Working Directory - SAFE MODE)
+# Shows files to be affected and asks for confirmation before clearing the directory and staging area.
+function gclr() {
+    local modified_and_staged_files
+    local untracked_files
+    
+    # 1. Check for ALL tracked files that are modified (in working directory or staged)
+    # This captures the state of all tracked files that are NOT HEAD.
+    modified_and_staged_files=$(git status --porcelain | grep -v "^??" | awk '{print $2}')
+    
+    # 2. Check for untracked files/directories (dry-run)
+    untracked_files=$(git clean -dfn)
+
+    # 3. Check if there's anything to clean
+    if [ -z "$modified_and_staged_files" ] && [ -z "$untracked_files" ]; then
+        echo "✅ Working directory and staging area are already clean."
+        return 0
+    fi
+
+    echo "=========================================================="
+    echo "⚠️ WARNING: TOTAL DIRECTORY CLEANUP IMMINENT"
+    echo "This operation will discard ALL uncommitted changes (Staged and Unstaged)."
+    echo "=========================================================="
+    
+    # Show Tracked Modified Files (Staged or Unstaged)
+    if [ -n "$modified_and_staged_files" ]; then
+        echo ">>> TRACKED MODIFIED FILES (Will be DISCARDED):"
+        echo "$modified_and_staged_files"
+    fi
+
+    # Show Untracked Files/Directories to be Deleted
+    if [ -n "$untracked_files" ]; then
+        echo ""
+        echo ">>> UNTRACKED FILES AND DIRECTORIES (Will be DELETED):"
+        echo "$untracked_files" | sed 's/Would remove //g'
+    fi
+
+    echo "=========================================================="
+    
+    # Ask for confirmation
+    read -r -p "Do you want to PROCEED with the full cleanup? (y/N) " response
+    
+    case "$response" in
+        [yY][eE][sS]|[yY]) 
+            # 1. UNSTAGE: Move all staged files back to the working directory
+            echo "1. Unstaging all files (git restore --staged .)..."
+            git restore --staged .
+            
+            # 2. DISCARD TRACKED: Discard all changes in the working directory
+            echo "2. Discarding all tracked changes (git restore .)..."
+            git restore .
+            
+            # 3. CLEAN UNTRACKED: Delete new files and directories
+            echo "3. Deleting untracked files and directories (git clean -fd)..."
+            git clean -fd
+            
+            echo "✅ Cleanup complete. Directory and staging area match last commit (HEAD)."
+            ;;
+        *)
+            echo "Operation cancelled. No changes were discarded."
+            return 1
+            ;;
+    esac
+}
