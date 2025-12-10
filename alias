@@ -1,0 +1,157 @@
+# ==========================================================
+# 🚀 PROFESSIONAL GIT PRODUCTIVITY ALIASES & FUNCTIONS
+# Optimized for Rebase, Squash, and Clean History Workflow
+# ==========================================================
+
+# ----------------------------------------------------------
+# I. BASIC & NAVIGATION ALIASES (Daily Use)
+# ----------------------------------------------------------
+alias g='git checkout main'     # Go to Main: Quickly switches to the main branch.
+alias ga='git add'              # Adds specific files to staging.
+alias gaa='git add --all'       # Stages all changes (modified, deleted, new files).
+alias gst='git status -sb'      # Quick Status: Shows a short, summarized status of your branch.
+alias gc='git commit'           # Creates a new commit.
+alias gt='git stash'            # Stash: Temporarily shelves current changes.
+alias co='git checkout'         # Switches to an existing branch.
+alias cob='git checkout -b'     # New Branch: Creates and switches to a new branch.
+alias br='git branch'           # Lists local branches.
+alias pu='git push'             # Pushes committed changes to the remote.
+alias pl='git pull'             # Fetches and integrates changes from the remote.
+
+
+# ----------------------------------------------------------
+# II. ADVANCED HISTORY & SAFETY ALIASES
+# ----------------------------------------------------------
+alias gl='git log --oneline --graph --decorate'              # Graphical Log: Shows the history with a clean graph view.
+alias glb='git log --oneline --graph --decorate main..HEAD'  # Branch Log: Shows only the commits unique to the current branch.
+alias gf='git fetch --all --prune'                           # Fetch & Prune: Updates remotes and cleans up deleted remote branches.
+alias grf='git reflog'                                       # Reflog: Shows a log of where HEAD has been (critical for recovery).
+alias fpush='git push --force-with-lease'                    # Safe Force Push: Pushes after rebase/squash only if the remote hasn't changed.
+alias grs='git reset --soft HEAD~1'                          # Soft Reset: Undoes the last commit, preserving changes in the staging area.
+alias gra='git rebase --abort'                               # Rebase Abort: Stops a rebase in progress.
+alias grc='git rebase --continue'                            # Rebase Continue: Continues a rebase after conflicts are resolved.
+
+
+# ----------------------------------------------------------
+# III. AUTOMATION FUNCTIONS
+# ----------------------------------------------------------
+
+# FUNCTION: s() (Commit WIP)
+# Stages all changes (git add .) and creates a temporary commit with the message "WIP".
+function s() {
+    echo "Staging all files (git add .)..."
+    git add .
+    
+    echo "Creating commit: WIP"
+    git commit -m "WIP"
+    
+    # Check if the commit was successful
+    if [ $? -eq 0 ]; then
+        echo "✅ WIP commit created successfully."
+    else
+        echo "❌ Error: Commit failed (files already staged or working directory clean)."
+    fi
+}
+
+# FUNCTION: gnb() (Git New Branch)
+# Creates a local branch and pushes it to the remote, establishing upstream tracking.
+# Usage: gnb <branch-name>
+function gnb() {
+    # Check for required argument
+    if [ -z "$1" ]; then
+        echo "Error: Please provide a name for the new branch."
+        return 1
+    fi
+    
+    # 1. Create the local branch and switch to it
+    git checkout -b "$1"
+    
+    # 2. Push the branch and set the upstream tracking
+    if [ $? -eq 0 ]; then
+        echo "Pushing branch and setting upstream tracking..."
+        git push --set-upstream origin "$1"
+    fi
+}
+
+# FUNCTION: gsq() (Git Squash All)
+# Resets the branch history to origin/main (or base), leaving all changes staged for a clean, unified commit.
+function gsq() {
+    # Define the base branch for comparison
+    local base_branch="origin/main"
+    
+    # 1. Find the commit where the current branch diverged from the base
+    local merge_base
+    merge_base=$(git merge-base "$base_branch" HEAD)
+    
+    if [ -z "$merge_base" ]; then
+        echo "Error: Could not find the common merge base with $base_branch."
+        return 1
+    fi  
+    
+    echo "WARNING: Undoing all commits up to the base commit: $merge_base, changes will be staged."
+    
+    # 2. Reset --soft to the base commit (deletes commits, keeps files staged)
+    git reset --soft "$merge_base"
+    
+    echo "Historial reset. All changes are staged."
+    # 3. Open commit editor for the unified message
+    git commit
+}
+
+# FUNCTION: grb() (Git Rebase onto Main)
+# Syncs 'main' and then rebases the current branch onto the updated 'main'.
+function grb() {
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    
+    if [[ "$current_branch" == "main" || "$current_branch" == "develop" ]]; then
+        echo "Error: Cannot rebase the main branch ($current_branch)!"
+        return 1
+    fi
+
+    echo "Synchronizing main branch..."
+    # 1. Pull and sync the main branch
+    git checkout main && git pull origin main
+    
+    echo "Rebasing $current_branch onto main..."
+    # 2. Rebase
+    git checkout "$current_branch" && git rebase main
+
+    # 3. Force push the rebased branch (use fpush alias for safety)
+    echo "Force pushing rebased branch..."
+    git push --force-with-lease
+}
+
+# FUNCTION: gpr() (Git Pull Request) - Title based on the latest Commit
+# Creates an Azure DevOps PR using the message of the most recent commit as the title.
+# Requires Azure CLI ('az') and the 'azure-devops' extension.
+# Usage: gpr [target_branch - default is main]
+function gpr() {
+    local source_branch
+    source_branch=$(git rev-parse --abbrev-ref HEAD)
+    local target_branch=${1:-main}  # Default target is 'main'
+
+    # Capture the subject of the last commit
+    local pr_title
+    pr_title=$(git log -1 --pretty=%s)
+
+    # Safety check
+    if [[ "$source_branch" == "main" || "$source_branch" == "develop" ]]; then
+        echo "ERROR: Cannot create a PR from a primary branch ($source_branch)!"
+        return 1
+    fi
+    
+    echo "Creating Pull Request for $source_branch towards $target_branch..."
+    echo "PR Title: $pr_title"
+    
+    # Call the Azure CLI
+    az repos pr create \
+        --title "$pr_title" \
+        --description "PR created from $source_branch. Commit message: $pr_title" \
+        --source-branch "$source_branch" \
+        --target-branch "$target_branch" \
+        --auto-complete false \
+        --open
+    
+    # The --open flag will open the PR in your browser.
+}
