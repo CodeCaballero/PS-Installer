@@ -31,7 +31,22 @@ $Tools = @(
     @{Name="Azure CLI"; WingetId="Microsoft.AzureCLI"},
     @{Name="Notepad++"; WingetId="Notepad++.Notepad++"},
     @{Name="MobaXterm"; WingetId="Mobatek.MobaXterm"},
-    @{Name="Pomodoro Timer"; WingetId="Marlon.Pomodoro"} # ejemplo Pomodoro
+    @{Name="IntelliJ IDEA Community"; WingetId="JetBrains.IntelliJIDEA.Community"}, 
+    @{Name="Docker"; WingetId="Docker.DockerDesktop"},
+    @{Name="Eclipse Temurin 21 JDK"; WingetId="EclipseAdoptium.Temurin.21.JDK"},
+    @{Name="DBeaver"; WingetId="DBeaver.DBeaver"},
+    @{Name="ShareX"; WingetId="ShareX.ShareX"},
+    @{Name="7-Zip"; WingetId="7zip.7zip"},
+    @{Name="PowerToys"; WingetId="Microsoft.PowerToys"},
+    @{Name="Telerik Fiddler Everywhere"; WingetId="Telerik.FiddlerEverywhere"},
+    @{Name="Everything"; WingetId="voidtools.Everything"},
+    @{Name="Windows Terminal"; WingetId="Microsoft.WindowsTerminal"},
+    @{Name="WinMerge"; WingetId="WinMerge.WinMerge"},
+    @{Name="Sabrogden.Ditto"; WingetId="Sabrogden.Ditto"},
+    @{Name="OWASP.ZedAttackProxy"; WingetId="OWASP.ZedAttackProxy"},
+    @{Name="NVDA"; WingetId="NVAccess.NVDA"},
+    @{Name="JAMSoftware.TreeSize.Free"; WingetId="JAMSoftware.TreeSizeFree"},
+    @{Name="Pomodoro Timer"; WingetId="Marlon.Pomodoro"} 
 )
 
 # ---------------------------
@@ -82,12 +97,38 @@ if ($selectedIndices -contains $vsCodeIndex) {
         "mhutchie.git-graph",              # Git Graph
         "donjayamanne.githistory",         # Git History
         "ms-python.python",                # Python
+        "AykutSarac.jsoncrack-vscode",     # JSON Crack
+        "formulahendry.auto-close-tag",    # Auto Close Tag
+        "eriklynd.json-tools",             # JSON Tools
+        "ms-azuretools.vscode-azurecli",   # Azure CLI
+        "pkief.material-icon-theme",       # Material Icon Theme
+        "mikestead.dotenv",                # DotENV
         "redhat.vscode-yaml"               # YAML
     )
 
     foreach ($ext in $Extensions) {
         Write-Host "⬇ Installing VS Code extension: $ext"
         code --install-extension $ext --force
+    }
+}
+
+# ---------------------------
+# Ensure Windows Terminal Shortcut exists
+# ---------------------------
+Write-Host "`n🔧 Checking Shortcuts..."
+$desktopPath = [Environment]::GetFolderPath("Desktop")
+$terminalShortcutPath = Join-Path $desktopPath "Windows Terminal.lnk"
+
+if (-not (Test-Path $terminalShortcutPath)) {
+    try {
+        $WshShell = New-Object -ComObject WScript.Shell
+        $Shortcut = $WshShell.CreateShortcut($terminalShortcutPath)
+        $Shortcut.TargetPath = "wt.exe" # Lanza la terminal moderna
+        $Shortcut.Description = "Open QA Command Center"
+        $Shortcut.Save()
+        Write-Host "➕ Created 'Windows Terminal' shortcut on Desktop." -ForegroundColor Green
+    } catch {
+        Write-Host "⚠ Could not create shortcut automatically." -ForegroundColor Yellow
     }
 }
 
