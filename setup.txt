@@ -1,0 +1,1 @@
+#irm https://raw.githubusercontent.com/CodeCaballero/PS-Installer/main/installer.ps1 | iex
