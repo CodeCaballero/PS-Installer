@@ -1,6 +1,7 @@
 # ==========================================================
-# 🚀 PROFESSIONAL GIT PRODUCTIVITY ALIASES & FUNCTIONS
+# GIT PRODUCTIVITY ALIASES & FUNCTIONS
 # Optimized for Rebase, Squash, and Clean History Workflow
+# curl -sSL https://raw.githubusercontent.com/CodeCaballero/PS-Installer/main/alias | tee -a ~/.bashrc
 # ==========================================================
 
 # ----------------------------------------------------------
